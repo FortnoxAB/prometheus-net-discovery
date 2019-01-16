@@ -1,5 +1,5 @@
 # prometheus-net-discovery
-Discover networks and generate files with targets to be used with `file_sd_config` file based discovery
+Scan entire networks for open ports with known prometheus exporters and generate files with targets to be used with `file_sd_config` file based discovery
 
 ### install
 
