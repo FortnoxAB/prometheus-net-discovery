@@ -47,6 +47,9 @@ var exporterConfig = ExporterConfig{
 	"9121": {
 		filename: "redis",
 	},
+	"9150": {
+		filename: "memcached",
+	},
 	"2379": {
 		filename: "etcd",
 	},
