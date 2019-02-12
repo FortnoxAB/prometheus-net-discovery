@@ -44,6 +44,9 @@ var exporterConfig = ExporterConfig{
 	"9101": {
 		filename: "haproxy",
 	},
+	"9113": {
+		filename: "nginx",
+	},
 	"9121": {
 		filename: "redis",
 	},
