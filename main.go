@@ -53,6 +53,9 @@ var exporterConfig = ExporterConfig{
 	"9150": {
 		filename: "memcached",
 	},
+	"9154": {
+		filename: "postfix",
+	},
 	"2379": {
 		filename: "etcd",
 	},
