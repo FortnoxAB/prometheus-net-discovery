@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -133,7 +134,7 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 			if network == "" {
 				continue
 			}
-			i = i + discoverNetwork(network, job, exporter)
+			i += discoverNetwork(network, job, exporter)
 		}
 		count <- i
 	}()
@@ -177,6 +178,12 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 //func calculateIps(network string) []string{
 //}
 
+var vipRegexp = regexp.MustCompile(`^.+-vip(\d+)?\.`)
+
+func isVip(name string) bool {
+	return vipRegexp.MatchString(name)
+}
+
 func discoverNetwork(network string, queue chan func(), exporter chan *Address) int64 {
 	networkip, ipnet, err := net.ParseCIDR(network)
 	if err != nil {
@@ -205,7 +212,7 @@ func discoverNetwork(network string, queue chan func(), exporter chan *Address) 
 					exporter <- nil
 					return
 				}
-				if strings.Contains(hostname, "-vip.") {
+				if isVip(hostname) {
 					logrus.Info("skipping vip ", hostname, ip)
 					exporter <- nil
 					return
