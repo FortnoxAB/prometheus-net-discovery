@@ -57,6 +57,9 @@ var exporterConfig = ExporterConfig{
 	"9154": {
 		filename: "postfix",
 	},
+	"9182": {
+		filename: "wmi",
+	},
 	"2379": {
 		filename: "etcd",
 	},
