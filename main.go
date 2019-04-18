@@ -60,6 +60,9 @@ var exporterConfig = ExporterConfig{
 	"9182": {
 		filename: "wmi",
 	},
+	"9187": {
+		filename: "postgres",
+	},
 	"2379": {
 		filename: "etcd",
 	},
