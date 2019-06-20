@@ -63,9 +63,6 @@ var exporterConfig = ExporterConfig{
 	"9187": {
 		filename: "postgres",
 	},
-	"2379": {
-		filename: "etcd",
-	},
 	"8080": {
 		filename: "cockroach",
 		path:     "https://%s/_status/vars",
