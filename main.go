@@ -67,6 +67,9 @@ var exporterConfig = ExporterConfig{
 	"9187": {
 		filename: "postgres",
 	},
+	"9253": {
+		filename: "php-fpm",
+	},
 	"9308": {
 		filename: "kafka",
 	},
