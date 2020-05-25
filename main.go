@@ -33,6 +33,9 @@ var exporterConfig = ExporterConfig{
 		filename: "cockroach",
 		path:     "https://%s/_status/vars",
 	},
+	"8081": {
+		filename: "php",
+	},
 	"9100": {
 		filename: "node",
 	},
@@ -284,7 +287,7 @@ func writeFileSDConfig(config *Config, path string, addresses []Address) error {
 		groups = append(groups, group)
 	}
 
-	// Dont remove targets if they happend to be down at the moment
+	// Dont remove targets if they happened to be down at the moment
 	for _, prev := range previous {
 		exists := false
 		for _, current := range groups {
