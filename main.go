@@ -29,12 +29,9 @@ type ExporterConfig map[string]struct {
 }
 
 var exporterConfig = ExporterConfig{
-	"8080": {
-		filename: "cockroach",
-		path:     "https://%s/_status/vars",
-	},
 	"8081": {
 		filename: "php",
+		path:     "http://%s/metrics",
 	},
 	"9100": {
 		filename: "node",
