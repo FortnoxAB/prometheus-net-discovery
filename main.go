@@ -70,6 +70,9 @@ var exporterConfig = ExporterConfig{
 	"9188": {
 		filename: "pgbouncer",
 	},
+	"9189": {
+		filename: "barman",
+	},
 	"9253": {
 		filename: "php-fpm",
 	},
