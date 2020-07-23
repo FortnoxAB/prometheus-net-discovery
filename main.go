@@ -49,6 +49,9 @@ var exporterConfig = ExporterConfig{
 	"9101": {
 		filename: "haproxy",
 	},
+	"9104": {
+		filename: "mysql",
+	},
 	"9113": {
 		filename: "nginx",
 	},
