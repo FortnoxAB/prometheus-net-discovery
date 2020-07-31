@@ -82,6 +82,9 @@ var exporterConfig = ExporterConfig{
 	"9308": {
 		filename: "kafka",
 	},
+	"9496": {
+		filename: "389ds",
+	},
 }
 
 func main() {
