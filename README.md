@@ -40,3 +40,19 @@ Generated environment variables:
    CONFIG_NETWORKS
 
 ```
+
+## Compile
+
+```
+ Example:docker build -t prometheus-net-discovery-9103 -f Dockerfile .
+docker run -it prometheus-net-discovery-9103:latest /bin/sh
+another terminal
+```
+## Add to the prome container
+```
+## copy the prometheus-net-discovery file to the local disk
+docker cp <container-id>:/opt/net-discovery/prometheus-net-discovery .
+
+## Added to the prometheus and create a new docker image
+docker build -t prometheus_discovery_9103-nodeexp:0.0.2 -f Dockerfile_Discover-with-Prom .
+```
