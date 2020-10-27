@@ -1,0 +1,11 @@
+From prom/prometheus:v2.22.1
+
+USER       nobody
+EXPOSE     9103
+#ARG Subnet
+#Env Subnet 192.168.75.0/24
+Env Subnet x.x.x.x/x
+COPY prometheus-net-discovery /bin/prometheus-net-discovery
+COPY discovery.sh /bin/discovery.sh
+#RUN ["chmod", "+x", "/bin/discovery.sh"]
+ENTRYPOINT ["/bin/discovery.sh"]
