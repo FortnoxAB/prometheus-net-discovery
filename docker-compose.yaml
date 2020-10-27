@@ -4,7 +4,7 @@ services:
         image: <image-name:latest>
         container_name: prometheus
         environment:
-            - Subnet=10.160.77.0/24 
+            - Subnet=x.x.x.x/x
         volumes:
             - ./prometheus.yml:/etc/prometheus/prometheus.yml:z
             - /prometheus
