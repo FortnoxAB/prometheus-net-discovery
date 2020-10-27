@@ -54,5 +54,5 @@ another terminal
 docker cp <container-id>:/opt/net-discovery/prometheus-net-discovery .
 
 ## Added to the prometheus and create a new docker image
-docker build -t prometheus_discovery_9103-nodeexp:0.0.2 -f Dockerfile_Discover-with-Prom .
+docker build -t prometheus_discovery_node-exp:0.0.2 -f Dockerfile_Discover-with-Prom .
 ```
