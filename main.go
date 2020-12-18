@@ -39,6 +39,9 @@ var exporterConfig = ExporterConfig{
 	"9108": {
 		filename: "elasticsearch",
 	},
+	"9114": {
+		filename: "elasticsearch",
+	},
 	"9216": {
 		filename: "mongodb",
 	},
