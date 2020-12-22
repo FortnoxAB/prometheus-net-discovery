@@ -137,7 +137,7 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 	exporter := make(chan *Address)
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 64; i++ {
 		go func() {
 			for {
 				select {
