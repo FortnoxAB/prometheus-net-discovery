@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -22,70 +23,96 @@ import (
 
 // ExporterConfig configures ports to scan to what filename to save it to.
 // if path is set we will try to make a HTTP get and find # TYPE in the first 10 rows of the response to make sure we know its prometheus metrics.
-// TODO make this runtime configurable
-type ExporterConfig map[string]struct {
+// TODO make this runtime configurable.
+type ExporterConfig []struct {
+	port     string
 	filename string
 	path     string
 }
 
+const ExporterExporterPort = "9999"
+
 var exporterConfig = ExporterConfig{
-	"8081": {
+	{ // special exporter_exporter we scan this first to know if we can skip the other ports.
+		port:     ExporterExporterPort,
+		filename: "",
+	},
+	{
+		port:     "8081",
 		filename: "php",
 		path:     "http://%s/metrics",
 	},
-	"9100": {
+	{
+		port:     "9100",
 		filename: "node",
 	},
-	"9108": {
+	{
+		port:     "9108",
 		filename: "elasticsearch",
 	},
-	"9114": {
+	{
+		port:     "9114",
 		filename: "elasticsearch",
 	},
-	"9216": {
+	{
+		port:     "9216",
 		filename: "mongodb",
 	},
-	"9091": {
+	{
+		port:     "9091",
 		filename: "minio",
 		path:     "http://%s/minio/prometheus/metrics",
 	},
-	"9101": {
+	{
+		port:     "9101",
 		filename: "haproxy",
 	},
-	"9104": {
+	{
+		port:     "9104",
 		filename: "mysql",
 	},
-	"9113": {
+	{
+		port:     "9113",
 		filename: "nginx",
 	},
-	"9121": {
+	{
+		port:     "9121",
 		filename: "redis",
 	},
-	"9150": {
+	{
+		port:     "9150",
 		filename: "memcached",
 	},
-	"9154": {
+	{
+		port:     "9154",
 		filename: "postfix",
 	},
-	"9182": {
+	{
+		port:     "9182",
 		filename: "wmi",
 	},
-	"9187": {
+	{
+		port:     "9187",
 		filename: "postgres",
 	},
-	"9188": {
+	{
+		port:     "9188",
 		filename: "pgbouncer",
 	},
-	"9189": {
+	{
+		port:     "9189",
 		filename: "barman",
 	},
-	"9253": {
+	{
+		port:     "9253",
 		filename: "php-fpm",
 	},
-	"9308": {
+	{
+		port:     "9308",
 		filename: "kafka",
 	},
-	"9496": {
+	{
+		port:     "9496",
 		filename: "389ds",
 	},
 }
@@ -94,12 +121,7 @@ func main() {
 	config := &Config{}
 	multiconfig.MustLoad(&config)
 
-	//logrus.SetReportCaller(true)
-
 	fnxlogrus.Init(config.Log, logrus.StandardLogger())
-
-	//router := gin.New()
-	//router.Use(ginlogrus.New(logrus.StandardLogger(), "/health", "/metrics"), gin.Recovery())
 
 	networks := strings.Split(config.Networks, ",")
 
@@ -116,15 +138,20 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		<-interrupt
+		cancel()
+		ticker.Stop()
+		log.Println("Shutting down")
+	}()
+
 	runDiscovery(ctx, config, networks)
 	for {
 		select {
 		case <-ticker.C:
 			runDiscovery(ctx, config, networks)
-		case <-interrupt:
-			cancel()
-			ticker.Stop()
-			log.Println("Shutting down")
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -133,16 +160,24 @@ func main() {
 func runDiscovery(parentCtx context.Context, config *Config, networks []string) {
 	logrus.Info("Running discovery")
 
-	job := make(chan func())
+	job := make(chan func(context.Context))
 	exporter := make(chan *Address)
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
-	for i := 0; i < 32; i++ {
+	var wg sync.WaitGroup
+	for i := 0; i < 128; i++ {
+		wg.Add(1)
+		i := i
 		go func() {
+			defer wg.Done()
 			for {
 				select {
-				case fn := <-job:
-					fn()
+				case fn, ok := <-job:
+					if !ok {
+						logrus.Debugf("worker %d finished", i)
+						return
+					}
+					fn(ctx)
 				case <-ctx.Done():
 					return
 				}
@@ -150,38 +185,31 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 		}()
 	}
 
-	count := make(chan int64)
 	go func() {
-		var i int64
 		for _, v := range networks {
+			if ctx.Err() != nil {
+				return
+			}
 			network := strings.TrimSpace(v)
 			if network == "" {
 				continue
 			}
-			i += discoverNetwork(network, job, exporter)
+			discoverNetwork(network, job, exporter)
 		}
-		count <- i
+		close(job)
 	}()
 
 	exporters := make(Exporters)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		var a int64
-		var b int64
 		for {
 			select {
-			case address := <-exporter:
-				a++
-				if address != nil {
-					exporters[address.Exporter] = append(exporters[address.Exporter], *address)
+			case address, ok := <-exporter:
+				if !ok {
+					return
 				}
-			case count := <-count:
-				b = count
-			}
-			if b == a {
+				exporters[address.Exporter] = append(exporters[address.Exporter], *address)
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -189,18 +217,22 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 
 	wg.Wait()
 
+	saveConfigs(ctx, config, exporters)
+	logrus.Info("discovery done")
+}
+
+func saveConfigs(ctx context.Context, config *Config, exporters Exporters) {
 	for name, addresses := range exporters {
+		if ctx.Err() != nil {
+			return
+		}
 		err := writeFileSDConfig(config, name, addresses)
 		if err != nil {
 			logrus.Error(err)
 			continue
 		}
 	}
-	logrus.Info("discovery done")
 }
-
-//func calculateIps(network string) []string{
-//}
 
 var vipRegexp = regexp.MustCompile(`^.+-vip(\d+)?\.`)
 
@@ -208,24 +240,34 @@ func isVip(name string) bool {
 	return vipRegexp.MatchString(name)
 }
 
-func discoverNetwork(network string, queue chan func(), exporter chan *Address) int64 {
+func discoverNetwork(network string, queue chan func(context.Context), exporter chan *Address) {
 	networkip, ipnet, err := net.ParseCIDR(network)
 	if err != nil {
 		log.Fatal("network CIDR could not be parsed:", err)
 	}
-	i := int64(0)
 	for ip := networkip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
 		network := network
 		ip := ip.String()
-		for port, data := range exporterConfig {
-			i++
-			port := port
-			data := data
-			queue <- func() {
-				//TODO also check if http request contains "# TYPE"
-				if !alive(ip, port, data.path) {
-					exporter <- nil
+		queue <- func(ctx context.Context) {
+			for _, data := range exporterConfig {
+				if ctx.Err() != nil {
 					return
+				}
+				port := data.port
+				logrus.Debugf("scanning port: %s:%s", ip, port)
+				var exporters []string
+				if port == ExporterExporterPort {
+					exporters, err = checkExporterExporter(ctx, ip, port)
+					if err != nil {
+						if !errors.Is(err, context.DeadlineExceeded) {
+							logrus.Errorf("error fetching from exporter_exporter: %s", err)
+						}
+						logrus.Debugf("%s:%s was not open", ip, port)
+						continue
+					}
+				} else if !alive(ctx, ip, port, data.path) {
+					logrus.Debugf("%s:%s was not open", ip, port)
+					continue
 				}
 
 				logrus.Info(net.JoinHostPort(ip, port), " is alive")
@@ -233,13 +275,25 @@ func discoverNetwork(network string, queue chan func(), exporter chan *Address) 
 				hostname := strings.TrimRight(getFirst(addr), ".")
 				if hostname == "" {
 					logrus.Error("missing reverse record for ", ip)
-					exporter <- nil
-					return
+					continue
 				}
 				if isVip(hostname) {
 					logrus.Info("skipping vip ", hostname, ip)
-					exporter <- nil
-					return
+					continue
+				}
+
+				if len(exporters) > 0 {
+					for _, filename := range exporters {
+						a := Address{
+							IP:       strings.TrimSpace(ip),
+							Hostname: strings.TrimSpace(hostname),
+							Subnet:   strings.TrimSpace(network),
+							Exporter: filename,
+							Port:     port,
+						}
+						exporter <- &a
+					}
+					return // we found exporter_exporter dont scan other ports so return here
 				}
 
 				a := Address{
@@ -254,7 +308,6 @@ func discoverNetwork(network string, queue chan func(), exporter chan *Address) 
 			}
 		}
 	}
-	return i
 }
 
 func getOldGroups(path string) ([]Group, error) {
@@ -269,7 +322,7 @@ func getOldGroups(path string) ([]Group, error) {
 
 	oldGroups := []Group{}
 	err = json.NewDecoder(file).Decode(&oldGroups)
-	if err == io.EOF { //Ignore empty files
+	if err == io.EOF { // Ignore empty files
 		return nil, nil
 	}
 	return oldGroups, err
