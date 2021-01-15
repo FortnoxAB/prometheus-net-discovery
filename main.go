@@ -259,7 +259,7 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				if port == ExporterExporterPort {
 					exporters, err = checkExporterExporter(ctx, ip, port)
 					if err != nil {
-						if !errors.Is(err, context.DeadlineExceeded) {
+						if !errors.Is(err, context.DeadlineExceeded) && !os.IsTimeout(err) {
 							logrus.Errorf("error fetching from exporter_exporter: %s", err)
 						}
 						logrus.Debugf("%s:%s was not open", ip, port)
