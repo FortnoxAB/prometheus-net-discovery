@@ -259,7 +259,7 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				if port == ExporterExporterPort {
 					exporters, err = checkExporterExporter(ctx, ip, port)
 					if err != nil {
-						if !errors.Is(err, context.DeadlineExceeded) && !os.IsTimeout(err) {
+						if !errors.Is(err, context.DeadlineExceeded) && !IsTimeout(err) {
 							logrus.Errorf("error fetching from exporter_exporter: %s", err)
 						}
 						logrus.Debugf("%s:%s was not open", ip, port)
@@ -328,8 +328,8 @@ func getOldGroups(path string) ([]Group, error) {
 	return oldGroups, err
 }
 
-func writeFileSDConfig(config *Config, path string, addresses []Address) error {
-	path = filepath.Join(config.FileSdPath, path+".json")
+func writeFileSDConfig(config *Config, exporterName string, addresses []Address) error {
+	path := filepath.Join(config.FileSdPath, exporterName+".json")
 
 	previous, err := getOldGroups(path)
 	if err != nil {
@@ -345,6 +345,10 @@ func writeFileSDConfig(config *Config, path string, addresses []Address) error {
 				"subnet": v.Subnet,
 				"host":   v.Hostname,
 			},
+		}
+		if v.Port == ExporterExporterPort {
+			group.Labels["__metrics_path__"] = "/proxy"
+			group.Labels["__param_module"] = exporterName
 		}
 		groups = append(groups, group)
 	}
