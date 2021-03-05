@@ -37,84 +37,88 @@ var exporterConfig = ExporterConfig{
 		port:     ExporterExporterPort,
 		filename: "",
 	},
-	{
-		port:     "8081",
-		filename: "php",
-		path:     "http://%s/metrics",
-	},
-	{
-		port:     "9100",
-		filename: "node",
-	},
-	{
-		port:     "9108",
-		filename: "elasticsearch",
-	},
-	{
-		port:     "9114",
-		filename: "elasticsearch",
-	},
-	{
-		port:     "9216",
-		filename: "mongodb",
-	},
-	{
-		port:     "9091",
-		filename: "minio",
-		path:     "http://%s/minio/prometheus/metrics",
-	},
-	{
-		port:     "9101",
-		filename: "haproxy",
-	},
-	{
-		port:     "9104",
-		filename: "mysql",
-	},
-	{
-		port:     "9113",
-		filename: "nginx",
-	},
-	{
-		port:     "9121",
-		filename: "redis",
-	},
-	{
-		port:     "9150",
-		filename: "memcached",
-	},
-	{
-		port:     "9154",
-		filename: "postfix",
-	},
-	{
-		port:     "9182",
-		filename: "wmi",
-	},
-	{
-		port:     "9187",
-		filename: "postgres",
-	},
-	{
-		port:     "9188",
-		filename: "pgbouncer",
-	},
-	{
-		port:     "9189",
-		filename: "barman",
-	},
-	{
-		port:     "9253",
-		filename: "php-fpm",
-	},
-	{
-		port:     "9308",
-		filename: "kafka",
-	},
-	{
-		port:     "9496",
-		filename: "389ds",
-	},
+	/*
+		disabled those since we only use exporter_exporter on 9999 for now.
+		TODO move this to a config
+		{
+			port:     "8081",
+			filename: "php",
+			path:     "http://%s/metrics",
+		},
+		{
+			port:     "9100",
+			filename: "node",
+		},
+		{
+			port:     "9108",
+			filename: "elasticsearch",
+		},
+		{
+			port:     "9114",
+			filename: "elasticsearch",
+		},
+		{
+			port:     "9216",
+			filename: "mongodb",
+		},
+		{
+			port:     "9091",
+			filename: "minio",
+			path:     "http://%s/minio/prometheus/metrics",
+		},
+		{
+			port:     "9101",
+			filename: "haproxy",
+		},
+		{
+			port:     "9104",
+			filename: "mysql",
+		},
+		{
+			port:     "9113",
+			filename: "nginx",
+		},
+		{
+			port:     "9121",
+			filename: "redis",
+		},
+		{
+			port:     "9150",
+			filename: "memcached",
+		},
+		{
+			port:     "9154",
+			filename: "postfix",
+		},
+		{
+			port:     "9182",
+			filename: "wmi",
+		},
+		{
+			port:     "9187",
+			filename: "postgres",
+		},
+		{
+			port:     "9188",
+			filename: "pgbouncer",
+		},
+		{
+			port:     "9189",
+			filename: "barman",
+		},
+		{
+			port:     "9253",
+			filename: "php-fpm",
+		},
+		{
+			port:     "9308",
+			filename: "kafka",
+		},
+		{
+			port:     "9496",
+			filename: "389ds",
+		},
+	*/
 }
 
 func main() {
@@ -322,7 +326,7 @@ func getOldGroups(path string) ([]Group, error) {
 
 	oldGroups := []Group{}
 	err = json.NewDecoder(file).Decode(&oldGroups)
-	if err == io.EOF { // Ignore empty files
+	if errors.Is(err, io.EOF) { // Ignore empty files
 		return nil, nil
 	}
 	return oldGroups, err
@@ -330,11 +334,6 @@ func getOldGroups(path string) ([]Group, error) {
 
 func writeFileSDConfig(config *Config, exporterName string, addresses []Address) error {
 	path := filepath.Join(config.FileSdPath, exporterName+".json")
-
-	previous, err := getOldGroups(path)
-	if err != nil {
-		return err
-	}
 
 	groups := []Group{}
 
@@ -351,6 +350,11 @@ func writeFileSDConfig(config *Config, exporterName string, addresses []Address)
 			group.Labels["__param_module"] = exporterName
 		}
 		groups = append(groups, group)
+	}
+
+	previous, err := getOldGroups(path)
+	if err != nil {
+		return err
 	}
 
 	// Dont remove targets if they happened to be down at the moment
