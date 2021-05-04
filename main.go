@@ -281,7 +281,7 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 					logrus.Error("missing reverse record for ", ip)
 					continue
 				}
-				if isVip(hostname) {
+				if isVip(hostname) && !strings.HasPrefix(hostname, "k8s-") {
 					logrus.Info("skipping vip ", hostname, ip)
 					continue
 				}
