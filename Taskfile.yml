@@ -1,0 +1,28 @@
+---
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task: build-go
+      - task: build-container
+      - task: test
+
+  build-go:
+    cmds:
+      - go build -o prometheus-net-discovery .
+
+  build-container:
+    cmds:
+      - ./test/run.bats
+      - docker build -t prometheus-net-discovery .
+
+  test:
+    cmds:
+      - ./test/run.bats
+
+  clean:
+    cmds:
+      - rm ./prometheus-net-discovery
