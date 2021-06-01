@@ -70,7 +70,7 @@ function start_container() {
 }
 
 @test "start yamllint" {
-  docker run --rm -it -v $(pwd):/data cytopia/yamllint .
+  docker run --rm -i -v $(pwd):/data cytopia/yamllint .
 }
 
 @test "start mdl" {
