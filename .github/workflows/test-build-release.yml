@@ -45,4 +45,4 @@ jobs:
           # docker create latest tag
           docker tag ${IMAGE}:${{ steps.dump-version.outputs.new_tag }} ${IMAGE}:latest
           # docker push images
-          docker push ${IMAGE}
+          docker push -a ${IMAGE}
