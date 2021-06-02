@@ -31,13 +31,13 @@ function start_container() {
 ## linter #####################################################################
 ###############################################################################
 
-@test "start hadolint" {
+@test "lint dockerfile" {
   docker run --rm -i hadolint/hadolint:$HADOLINT_VERSION < Dockerfile
   debug "${status}" "${output}" "${lines}"
   [[ "${status}" -eq 0 ]]
 }
 
-@test "start container-structure-test" {
+@test "run container-structure-test" {
 
   # init
   mkdir -p "$HOME/bin"
@@ -69,15 +69,15 @@ function start_container() {
   [[ "${status}" -eq 0 ]]
 }
 
-@test "start yamllint" {
+@test "lint yaml files" {
   docker run --rm -i -v $(pwd):/data cytopia/yamllint .
 }
 
-@test "start mdl" {
-# TODO: add mdl lint
+@test "lint markdown files" {
+  docker run --rm -i -v $(pwd):/data steinbrueckri/mdl -c /data/.mdlrc /data
 }
 
-@test "start helm lint" {
+@test "lint helm charts" {
   docker run --rm -i -v $(pwd):/data quay.io/helmpack/chart-testing sh -c "cd /data && ct lint --all"
 }
 
@@ -85,12 +85,8 @@ function start_container() {
 ## test cases #################################################################
 ###############################################################################
 
-###############################################################################
-## general cases ##############################################################
-###############################################################################
-
-@test "Smoke test" {}
 # TODO: Just start and test if the daemon is running
+# @test "Smoke test" {}
 
-@test "Run scan" {}
 # TODO: Start and scan the network
+# @test "Run scan" {}
