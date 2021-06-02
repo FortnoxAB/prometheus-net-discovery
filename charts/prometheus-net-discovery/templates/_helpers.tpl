@@ -60,3 +60,13 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create default labels
+*/}}
+{{- define "prometheus-net-discovery.defaultLabels" -}}
+{{- $labelChart := include "prometheus-net-discovery.chart" $ -}}
+{{- $labelApp := include "prometheus-net-discovery.name" $ -}}
+{{- $labels := dict "app" $labelApp "chart" $labelChart "release" .Release.Name "heritage" .Release.Service -}}
+{{ merge .extraLabels $labels | toYaml | indent 4 }}
+{{- end -}}

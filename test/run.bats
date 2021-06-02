@@ -77,6 +77,10 @@ function start_container() {
 # TODO: add mdl lint
 }
 
+@test "start helm lint" {
+  docker run --rm -i -v $(pwd):/data quay.io/helmpack/chart-testing sh -c "cd /data && ct lint --all"
+}
+
 ###############################################################################
 ## test cases #################################################################
 ###############################################################################
