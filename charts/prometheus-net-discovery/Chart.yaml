@@ -1,0 +1,14 @@
+---
+apiVersion: v2
+name: prometheus-net-discovery
+description: A Helm chart for prometheus-net-discovery
+keywords:
+- prometheus-net-discovery
+- prometheus
+maintainers:
+- email: richard.steinbrueck@gmail.com
+  name: steinbrueckri
+type: application
+
+version: v1.3.4
+appVersion: "v1.3.3"

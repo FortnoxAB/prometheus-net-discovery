@@ -1,0 +1,135 @@
+---
+
+# define the scan interval
+interval: "60m"
+# define the logging format
+log_format: "text"
+# define formatter
+log_formatter: ""
+# define log log level
+log_level: "info"
+# define the ip ranges separated by comma e.g. 10.0.0.0/24,192.168.66.0/24
+networks: ""
+
+image:
+  repository: steinbrueckri/prometheus-net-discovery
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Optional nodeSelector annotations
+nodeSelector: {}
+
+# Optional tolerations annotations
+tolerations: []
+
+# Optional affinity annotations
+affinity: {}
+
+# Optional pod annotations
+podAnnotations: {}
+
+# Optional pod labels
+podLabels: {}
+
+# Optional service annotations
+serviceAnnotations: {}
+
+# Optional service labels
+serviceLabels: {}
+
+# Optional serviceAccount labels
+serviceAccountLabels: {}
+
+# Optional persistentVolume labels
+persistentVolumeLabels: {}
+
+persistentVolume:
+  ## If true, prometheus-net-discovery will create/use a Persistent Volume Claim
+  ## If false, use emptyDir. You can do this but it makes no sense becuase you need to mount
+  ## the pvc also to the prometheus to use the file_sd.
+  ##
+  enabled: true
+
+  ## prometheus-net-discovery data Persistent Volume access modes
+  ## Must match those of existing PV or dynamic provisioner
+  ## Ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+  ##
+  accessModes:
+    - ReadWriteOnce
+
+  ## prometheus-net-discovery data Persistent Volume Claim annotations
+  ##
+  annotations: {}
+
+  ## prometheus-net-discovery data Persistent Volume existing claim name
+  ## Requires prometheus-net-discovery.persistentVolume.enabled: true
+  ## If defined, PVC must be created manually before volume will be bound
+  existingClaim: ""
+
+  ## prometheus-net-discovery data Persistent Volume mount root path
+  ##
+  mountPath: /data
+
+  ## prometheus-net-discovery data Persistent Volume size
+  ##
+  size: 2Gi
+
+  ## prometheus-net-discovery data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  # storageClass: "-"
+
+# Configuration for clusters with restrictive network policies in place:
+# - allowAll allows access to the prometheus-net-discovery from any namespace
+# - customSelector is a list of pod/namespaceSelectors to allow access from
+# These options are mutually exclusive and the latter will take precedence.
+networkPolicy: {}
+  # allowAll: true
+  # customSelectors:
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         type: admin
+  #   - podSelector:
+  #       matchLabels:
+  #         app: myapp
