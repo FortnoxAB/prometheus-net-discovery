@@ -10,7 +10,6 @@ FROM alpine:3.13.5
 WORKDIR /opt/net-discovery
 RUN mkdir /opt/net-discovery/configs
 ENV CONFIG_FILESDPATH=/opt/net-discovery/configs
-ENV CONFIG_NETWORKS=192.168.1.1/24
 
 COPY --from=builder /build/prometheus-net-discovery .
 
