@@ -1,12 +1,15 @@
 ---
 
+# define the scan interval
 interval: "60m"
+# define the logging format
 log_format: "text"
+# define formatter
 log_formatter: ""
+# define log log level
 log_level: "info"
+# define the ip ranges separated by comma e.g. 10.0.0.0/24,192.168.66.0/24
 networks: ""
-
-replicaCount: 1
 
 image:
   repository: steinbrueckri/prometheus-net-discovery
