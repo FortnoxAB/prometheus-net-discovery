@@ -16,4 +16,4 @@ rules:
         max-spaces-inside-empty: 0
 
 ignore: |
-    chart/
+    charts/
