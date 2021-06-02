@@ -40,3 +40,7 @@ Generated environment variables:
    CONFIG_NETWORKS
 
 ```
+
+### TODO
+
+- Add metrics to prometheus-net-discovery
