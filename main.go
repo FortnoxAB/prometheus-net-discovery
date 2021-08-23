@@ -277,7 +277,6 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				logrus.Info(net.JoinHostPort(ip, port), " is alive")
 				addr, _ := net.LookupAddr(ip) // #nosec
 				hostname := strings.TrimRight(getFirst(addr), ".")
-                                hostname := strings.TrimRight(getFirst(addr), ".")
                                 if hostname == "" {
                                         logrus.Info("Missing reverse record for ", ip, ",using ip address instead.")
                                         hostname = ip
