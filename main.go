@@ -335,6 +335,10 @@ func getOldGroups(path string) ([]Group, error) {
 func writeFileSDConfig(config *Config, exporterName string, addresses []Address) error {
 	path := filepath.Join(config.FileSdPath, exporterName+".json")
 
+        if _, err := os.Stat(config.FileSdPath); os.IsNotExist(err) {
+            os.MkdirAll(config.FileSdPath, 0755)
+        }
+
 	groups := []Group{}
 
 	for _, v := range addresses {
