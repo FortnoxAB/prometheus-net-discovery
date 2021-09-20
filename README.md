@@ -30,6 +30,8 @@ Usage of prometheus-net-discovery:
     	Change value of Log-Level.
   -networks
     	Change value of Networks.
+  -skipresolve
+	skip reverse resolution of ip addresses and use ip address instead (default: false)
 
 Generated environment variables:
    CONFIG_FILESDPATH

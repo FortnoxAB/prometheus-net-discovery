@@ -198,7 +198,7 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 			if network == "" {
 				continue
 			}
-			discoverNetwork(network, job, exporter)
+			discoverNetwork(config, network, job, exporter)
 		}
 		close(job)
 	}()
@@ -244,7 +244,7 @@ func isVip(name string) bool {
 	return vipRegexp.MatchString(name)
 }
 
-func discoverNetwork(network string, queue chan func(context.Context), exporter chan *Address) {
+func discoverNetwork(config *Config, network string, queue chan func(context.Context), exporter chan *Address) {
 	networkip, ipnet, err := net.ParseCIDR(network)
 	if err != nil {
 		log.Fatal("network CIDR could not be parsed:", err)
@@ -275,16 +275,22 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				}
 
 				logrus.Info(net.JoinHostPort(ip, port), " is alive")
-				addr, _ := net.LookupAddr(ip) // #nosec
-				hostname := strings.TrimRight(getFirst(addr), ".")
-				if hostname == "" {
-					logrus.Error("missing reverse record for ", ip)
-					continue
-				}
-				if isVip(hostname) && !strings.HasPrefix(hostname, "k8s-") {
-					logrus.Info("skipping vip ", hostname, ip)
-					continue
-				}
+
+                                var hostname string
+                                if config.SkipResolve == true {
+                                        hostname = ip
+                                } else {
+                                        addr, _ := net.LookupAddr(ip) // #nosec
+                                        hostname = strings.TrimRight(getFirst(addr), ".")
+
+                                        if hostname == "" {
+                                                logrus.Error("missing reverse record for ", ip)
+                                        }
+
+                                        if isVip(hostname) && !strings.HasPrefix(hostname, "k8s-") {
+                                                logrus.Info("skipping vip ", hostname, ip)
+                                        }
+                                }
 
 				if len(exporters) > 0 {
 					for _, filename := range exporters {

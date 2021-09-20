@@ -10,6 +10,7 @@ type Config struct {
 	Interval string `default:"60m"`
 	// FileSdPath specifies where to put your generated files. Example /etc/prometheus/file_sd/
 	FileSdPath string
+        SkipResolve bool
 	Log        fnxlogrus.Config
 }
 
