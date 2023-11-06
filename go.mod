@@ -11,6 +11,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
