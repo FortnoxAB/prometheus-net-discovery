@@ -1,0 +1,88 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "prometheus-net-discovery.fullname" . }}
+  labels:
+    {{- include "prometheus-net-discovery.labels" . | nindent 4 }}
+spec:
+  # NOTE: becuase of the mounted PVC only one replicas can run on the sametime
+  replicas: 1
+  strategy:
+        # NOTE: same response as above
+        type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prometheus-net-discovery.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "prometheus-net-discovery.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "prometheus-net-discovery.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CONFIG_FILEPATH
+          {{- if .Values.persistentVolume.enabled }}
+              value: {{ .Values.persistentVolume.mountPath }} 
+          {{- else }}
+              value: "/tmp/" 
+          {{- end }}
+            - name: CONFIG_INTERVAL
+              value: {{ .Values.interval}} 
+            - name: CONFIG_LOG_FORMAT
+              value: {{ .Values.log_format }}
+            - name: CONFIG_LOG_FORMATTER
+              value: {{ .Values.log_formatter }} 
+            - name: CONFIG_LOG_LEVEL
+              value: {{ .Values.log_level }}
+            - name: CONFIG_NETWORKS
+              value: {{ .Values.networks }} 
+        {{- if .Values.extraVars }}
+{{ toYaml .Values.extraVars | indent 12 }}
+        {{- end }}
+        {{- if .Values.extraArgs }}
+          args:
+{{ toYaml .Values.extraArgs | indent 12 }}
+        {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistentVolume.enabled }}
+          volumeMounts:
+            - name: storage-volume
+              mountPath: "{{ .Values.persistentVolume.mountPath }}"
+              subPath: "{{ .Values.persistentVolume.subPath }}"
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.persistentVolume.enabled }}
+      volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: {{ if .Values.persistentVolume.existingClaim }}{{ .Values.persistentVolume.existingClaim }}{{- else }}{{ template "prometheus-net-discovery.fullname" . }}{{- end }}
+      {{- end -}}

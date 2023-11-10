@@ -1,0 +1,24 @@
+---
+schemaVersion: 2.0.0
+
+fileExistenceTests:
+  - name: '/opt/net-discovery exists ...'
+    path: /opt/net-discovery
+    shouldExist: true
+    uid: 0
+    gid: 0
+
+  - name: '/opt/net-discovery/configs exists ...'
+    path: /opt/net-discovery/configs
+    shouldExist: true
+    uid: 0
+    gid: 0
+
+  - name: '/opt/net-discovery/prometheus-net-discovery ...'
+    path: /opt/net-discovery/prometheus-net-discovery
+    shouldExist: true
+    uid: 0
+    gid: 0
+
+metadataTest:
+  cmd: ['./prometheus-net-discovery']
