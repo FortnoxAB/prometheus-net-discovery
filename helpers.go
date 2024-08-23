@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -30,9 +29,19 @@ func getFirst(s []string) string {
 	return ""
 }
 
+var dialer = &net.Dialer{
+	Timeout:   3 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
 var client = &http.Client{
 	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec only cockroach at the moment
+		// 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec only cockroach at the moment
+		DialContext:           dialer.DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       10 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	},
 }
 
