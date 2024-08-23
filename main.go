@@ -23,107 +23,26 @@ import (
 
 // ExporterConfig configures ports to scan to what filename to save it to.
 // if path is set we will try to make a HTTP get and find # TYPE in the first 10 rows of the response to make sure we know its prometheus metrics.
-// TODO make this runtime configurable.
 type ExporterConfig []struct {
 	port     string
 	filename string
 	path     string
 }
 
-const ExporterExporterPort = "9999"
-
 var exporterConfig = ExporterConfig{
-	{ // special exporter_exporter we scan this first to know if we can skip the other ports.
-		port:     ExporterExporterPort,
+	// We only support exporter_exporter at the moment
+	{
+		port:     "",
 		filename: "",
 	},
-	/*
-		disabled those since we only use exporter_exporter on 9999 for now.
-		TODO move this to a config
-		{
-			port:     "8081",
-			filename: "php",
-			path:     "http://%s/metrics",
-		},
-		{
-			port:     "9100",
-			filename: "node",
-		},
-		{
-			port:     "9108",
-			filename: "elasticsearch",
-		},
-		{
-			port:     "9114",
-			filename: "elasticsearch",
-		},
-		{
-			port:     "9216",
-			filename: "mongodb",
-		},
-		{
-			port:     "9091",
-			filename: "minio",
-			path:     "http://%s/minio/prometheus/metrics",
-		},
-		{
-			port:     "9101",
-			filename: "haproxy",
-		},
-		{
-			port:     "9104",
-			filename: "mysql",
-		},
-		{
-			port:     "9113",
-			filename: "nginx",
-		},
-		{
-			port:     "9121",
-			filename: "redis",
-		},
-		{
-			port:     "9150",
-			filename: "memcached",
-		},
-		{
-			port:     "9154",
-			filename: "postfix",
-		},
-		{
-			port:     "9182",
-			filename: "wmi",
-		},
-		{
-			port:     "9187",
-			filename: "postgres",
-		},
-		{
-			port:     "9188",
-			filename: "pgbouncer",
-		},
-		{
-			port:     "9189",
-			filename: "barman",
-		},
-		{
-			port:     "9253",
-			filename: "php-fpm",
-		},
-		{
-			port:     "9308",
-			filename: "kafka",
-		},
-		{
-			port:     "9496",
-			filename: "389ds",
-		},
-	*/
 }
+
+var mutex sync.Mutex
 
 func main() {
 	config := &Config{}
 	multiconfig.MustLoad(&config)
+	exporterConfig[0].port = config.ExpoterExporterPort
 
 	fnxlogrus.Init(config.Log, logrus.StandardLogger())
 
@@ -138,14 +57,11 @@ func main() {
 	logrus.Infof("Running with interval %s", interval)
 
 	ticker := time.NewTicker(interval)
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
-
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM)
+	defer cancel()
 
 	go func() {
-		<-interrupt
-		cancel()
+		startWs(config, ctx)
 		ticker.Stop()
 		log.Println("Shutting down")
 	}()
@@ -226,6 +142,8 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 }
 
 func saveConfigs(ctx context.Context, config *Config, exporters Exporters) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	for name, addresses := range exporters {
 		if ctx.Err() != nil {
 			return
@@ -260,16 +178,11 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				port := data.port
 				logrus.Debugf("scanning port: %s:%s", ip, port)
 				var exporters []string
-				if port == ExporterExporterPort {
-					exporters, err = checkExporterExporter(ctx, ip, port)
-					if err != nil {
-						if !errors.Is(err, context.DeadlineExceeded) && !IsTimeout(err) {
-							logrus.Errorf("error fetching from exporter_exporter: %s", err)
-						}
-						logrus.Debugf("%s:%s was not open", ip, port)
-						continue
+				exporters, err = checkExporterExporter(ctx, ip, port)
+				if err != nil {
+					if !errors.Is(err, context.DeadlineExceeded) && !IsTimeout(err) {
+						logrus.Debugf("error fetching from exporter_exporter: %s", err)
 					}
-				} else if !alive(ctx, ip, port, data.path) {
 					logrus.Debugf("%s:%s was not open", ip, port)
 					continue
 				}
@@ -297,18 +210,7 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 						}
 						exporter <- &a
 					}
-					return // we found exporter_exporter dont scan other ports so return here
 				}
-
-				a := Address{
-					IP:       strings.TrimSpace(ip),
-					Hostname: strings.TrimSpace(hostname),
-					Subnet:   strings.TrimSpace(network),
-					Exporter: data.filename,
-					Port:     port,
-				}
-
-				exporter <- &a
 			}
 		}
 	}
@@ -335,9 +237,9 @@ func getOldGroups(path string) ([]Group, error) {
 func writeFileSDConfig(config *Config, exporterName string, addresses []Address) error {
 	path := filepath.Join(config.FileSdPath, exporterName+".json")
 
-        if _, err := os.Stat(config.FileSdPath); os.IsNotExist(err) {
-            os.MkdirAll(config.FileSdPath, 0755)
-        }
+	if _, err := os.Stat(config.FileSdPath); os.IsNotExist(err) {
+		os.MkdirAll(config.FileSdPath, 0755)
+	}
 
 	groups := []Group{}
 
@@ -349,7 +251,7 @@ func writeFileSDConfig(config *Config, exporterName string, addresses []Address)
 				"host":   v.Hostname,
 			},
 		}
-		if v.Port == ExporterExporterPort {
+		if v.Port == config.ExpoterExporterPort {
 			group.Labels["__metrics_path__"] = "/proxy"
 			group.Labels["__param_module"] = exporterName
 		}

@@ -9,8 +9,10 @@ type Config struct {
 	// Interval is how often to scan. Default 60m
 	Interval string `default:"60m"`
 	// FileSdPath specifies where to put your generated files. Example /etc/prometheus/file_sd/
-	FileSdPath string
-	Log        fnxlogrus.Config
+	FileSdPath          string
+	Log                 fnxlogrus.Config
+	Port                string `default:"8080"`
+	ExpoterExporterPort string `default:"9999"`
 }
 
 // Exporters is a list of addresses grouped by exporter name.
