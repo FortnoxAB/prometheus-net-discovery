@@ -1,4 +1,4 @@
-module github.com/fortnoxab/prometheus-net-discovery
+module github.com/fortnoxab/prometheus-net-discovery/v2
 
 go 1.22
 
