@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 func inc(ip net.IP) {
@@ -76,46 +72,4 @@ func checkExporterExporter(parentCtx context.Context, host, port string) ([]stri
 	}
 
 	return exporters, nil
-}
-
-func alive(parentCtx context.Context, host, port, path string) bool {
-	if path != "" {
-		u := fmt.Sprintf(path, net.JoinHostPort(host, port))
-
-		ctx, cancel := context.WithTimeout(parentCtx, time.Second*3)
-		defer cancel()
-		req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
-		if err != nil {
-			logrus.Errorf("error creating request: %s", err)
-			return false
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-
-		r := bufio.NewReader(resp.Body)
-		for i := 0; i < 10; i++ {
-			line, _, err := r.ReadLine()
-			if err != nil {
-				return false
-			}
-			if bytes.Contains(line, []byte("# TYPE")) {
-				return true
-			}
-		}
-		return false
-	}
-
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 200*time.Millisecond)
-	if err != nil {
-		return false
-	}
-
-	if conn != nil {
-		conn.Close()
-		return true
-	}
-	return false
 }

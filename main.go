@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -238,7 +239,9 @@ func writeFileSDConfig(config *Config, exporterName string, addresses []Address)
 	path := filepath.Join(config.FileSdPath, exporterName+".json")
 
 	if _, err := os.Stat(config.FileSdPath); os.IsNotExist(err) {
-		os.MkdirAll(config.FileSdPath, 0755)
+		if err := os.MkdirAll(config.FileSdPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
 	}
 
 	groups := []Group{}
