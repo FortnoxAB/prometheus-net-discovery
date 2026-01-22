@@ -1,3 +1,5 @@
+version: 2
+
 project_name: prometheus-net-discovery
 
 # setups builds for linux and darwin on amd64 and arm64
@@ -53,6 +55,7 @@ signs:
       - sign-blob
       - "--output-certificate=${certificate}"
       - "--output-signature=${signature}"
+      - "--bundle=${artifact}.bundle"
       - "${artifact}"
       - "--yes" # needed on cosign 2.0.0+
     artifacts: checksum
