@@ -150,14 +150,6 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 
 	saveConfigs(ctx, config, exporters)
 
-	// Log summary of discovered exporters
-	totalTargets := 0
-	for name, addresses := range exporters {
-		logrus.Debugf("exporter %s: %d targets", name, len(addresses))
-		totalTargets += len(addresses)
-	}
-	logrus.Debugf("found %d unique exporters with %d total targets", len(exporters), totalTargets)
-
 	logrus.Info("discovery done")
 }
 
