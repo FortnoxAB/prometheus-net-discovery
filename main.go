@@ -20,6 +20,7 @@ import (
 	"github.com/fortnoxab/fnxlogrus"
 	"github.com/koding/multiconfig"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 // ExporterConfig configures ports to scan to what filename to save it to.
@@ -43,7 +44,7 @@ var mutex sync.Mutex
 func main() {
 	config := &Config{}
 	multiconfig.MustLoad(&config)
-	exporterConfig[0].port = config.ExpoterExporterPort
+	exporterConfig[0].port = config.ExporterExporterPort
 
 	fnxlogrus.Init(config.Log, logrus.StandardLogger())
 
@@ -85,8 +86,13 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 	exporter := make(chan *Address)
 	ctx, cancel := context.WithCancel(parentCtx)
 	defer cancel()
+
+	// Rate limiter for HTTP probes (still useful to spread load)
+	limiter := rate.NewLimiter(rate.Limit(config.ScanRateLimit), 1)
+
 	var wg sync.WaitGroup
-	for i := 0; i < 128; i++ {
+	workerCount := config.Workers
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		i := i
 		go func() {
@@ -96,6 +102,10 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 				case fn, ok := <-job:
 					if !ok {
 						logrus.Debugf("worker %d finished", i)
+						return
+					}
+					// Wait for rate limiter before processing
+					if err := limiter.Wait(ctx); err != nil {
 						return
 					}
 					fn(ctx)
@@ -115,7 +125,7 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 			if network == "" {
 				continue
 			}
-			discoverNetwork(network, job, exporter)
+			discoverNetwork(network, job, exporter, config)
 		}
 		close(job)
 	}()
@@ -139,6 +149,7 @@ func runDiscovery(parentCtx context.Context, config *Config, networks []string) 
 	wg.Wait()
 
 	saveConfigs(ctx, config, exporters)
+
 	logrus.Info("discovery done")
 }
 
@@ -163,12 +174,46 @@ func isVip(name string) bool {
 	return vipRegexp.MatchString(name)
 }
 
-func discoverNetwork(network string, queue chan func(context.Context), exporter chan *Address) {
+// isNetworkOrBroadcast checks if the IP is the network address or broadcast address of the given subnet.
+// Note: IPv6 addresses always return false as IPv6 doesn't have broadcast addresses.
+// For IPv6, this function only filters the all-zeros network address.
+func isNetworkOrBroadcast(ip net.IP, ipnet *net.IPNet) bool {
+	// Try IPv4 first
+	ipv4 := ip.To4()
+	if ipv4 != nil {
+		// Get network address
+		networkIP := ipv4.Mask(ipnet.Mask)
+
+		// Calculate broadcast address
+		broadcast := make(net.IP, len(networkIP))
+		for i := range networkIP {
+			broadcast[i] = networkIP[i] | ^ipnet.Mask[i]
+		}
+
+		return ipv4.Equal(networkIP) || ipv4.Equal(broadcast)
+	}
+
+	// For IPv6, check if it's the network address (IPv6 doesn't have broadcast)
+	networkIP := ip.Mask(ipnet.Mask)
+	return ip.Equal(networkIP)
+}
+
+func discoverNetwork(network string, queue chan func(context.Context), exporter chan *Address, config *Config) {
 	networkip, ipnet, err := net.ParseCIDR(network)
 	if err != nil {
 		log.Fatal("network CIDR could not be parsed:", err)
 	}
+
+	skippedCount := 0
 	for ip := networkip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
+		// Skip network and broadcast addresses if configured
+		currentIP := make(net.IP, len(ip))
+		copy(currentIP, ip)
+		if config.SkipNetworkBroadcast && isNetworkOrBroadcast(currentIP, ipnet) {
+			skippedCount++
+			continue
+		}
+
 		network := network
 		ip := ip.String()
 		queue <- func(ctx context.Context) {
@@ -189,10 +234,10 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				}
 
 				logrus.Info(net.JoinHostPort(ip, port), " is alive")
-				addr, _ := net.LookupAddr(ip) // #nosec
+				addr, _ := net.DefaultResolver.LookupAddr(ctx, ip) // #nosec
 				hostname := strings.TrimRight(getFirst(addr), ".")
 				if hostname == "" {
-					logrus.Error("missing reverse record for ", ip)
+					logrus.Debugf("skipping %s: missing reverse record", ip)
 					continue
 				}
 				if isVip(hostname) && !strings.HasPrefix(hostname, "k8s-") {
@@ -214,6 +259,9 @@ func discoverNetwork(network string, queue chan func(context.Context), exporter 
 				}
 			}
 		}
+	}
+	if skippedCount > 0 {
+		logrus.Debugf("Skipped %d network/broadcast addresses in %s", skippedCount, network)
 	}
 }
 
@@ -254,7 +302,7 @@ func writeFileSDConfig(config *Config, exporterName string, addresses []Address)
 				"host":   v.Hostname,
 			},
 		}
-		if v.Port == config.ExpoterExporterPort {
+		if v.Port == config.ExporterExporterPort {
 			group.Labels["__metrics_path__"] = "/proxy"
 			group.Labels["__param_module"] = exporterName
 		}

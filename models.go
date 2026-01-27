@@ -1,6 +1,8 @@
 package main
 
-import "github.com/fortnoxab/fnxlogrus"
+import (
+	"github.com/fortnoxab/fnxlogrus"
+)
 
 // Config is main application configuration.
 type Config struct {
@@ -12,7 +14,13 @@ type Config struct {
 	FileSdPath          string
 	Log                 fnxlogrus.Config
 	Port                string `default:"8080"`
-	ExpoterExporterPort string `default:"9999"`
+	ExporterExporterPort string `default:"9999"`
+	// Workers is the number of concurrent workers for scanning. Default 16
+	Workers int `default:"16"`
+	// ScanRateLimit is the maximum number of hosts to scan per second. Default 50 to reduce network load
+	ScanRateLimit float64 `default:"50"`
+	// SkipNetworkBroadcast skips network and broadcast addresses. Default true
+	SkipNetworkBroadcast bool `default:"true"`
 }
 
 // Exporters is a list of addresses grouped by exporter name.
